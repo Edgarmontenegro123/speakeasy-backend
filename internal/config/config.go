@@ -2,7 +2,7 @@ package config
 
 import "os"
 
-const defaultGeminiModel = "gemini-2.5-flash"
+const defaultGeminiModel = "gemini-flash-latest"
 
 type Config struct {
 	Port         string

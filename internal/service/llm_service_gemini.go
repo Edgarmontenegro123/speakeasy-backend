@@ -10,7 +10,7 @@ import (
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/model"
 )
 
-const geminiModel = "gemini-1.5-flash"
+const geminiModel = "gemini-1.5-flash-latest"
 
 // geminiLLMService generates tutor replies using the Gemini API.
 type geminiLLMService struct {

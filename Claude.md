@@ -1,11 +1,16 @@
-# Speakeasy — Development Guidelines
+# Speakeasy Backend — Development Guidelines
 
 ## Commands
-- Frontend Dev: `cd client && npm run dev`
-- Frontend Lint: `cd client && npm run lint`
-- Backend Dev: `cd server && go run main.go`
+- Run: `go run main.go`
+- Build: `go build ./...`
+- Test: `go test ./...`
+- Vet: `go vet ./...`
+- Format: `gofmt -l .`
+- Tidy dependencies: `go mod tidy`
 
 ## Code Style Guidelines
-- **JS/TS Syntax:** Single quotes `'`, NO semicolons `;`, compact imports `{useState, useEffect}`.
-- **Architecture:** React (Vite) frontend with custom hooks, Go REST API backend.
+- **Architecture:** Go REST API in layers — `internal/handler` → `internal/service` → `internal/repository` → `internal/model`, wired together in `internal/router`.
 - **Git Commits:** Emoji + British English description (e.g. `🐛 Fix audio state machine transition`).
+
+## Related Repositories
+- Frontend: [speakeasy-frontend](https://github.com/Edgarmontenegro123/speakeasy-frontend)

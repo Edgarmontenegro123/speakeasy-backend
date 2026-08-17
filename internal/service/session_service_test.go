@@ -11,7 +11,7 @@ import (
 func TestSessionService_CreateSession(t *testing.T) {
 	topics := repository.NewTopicRepository()
 	sessions := repository.NewSessionRepository()
-	s := NewSessionService(sessions, topics)
+	s := NewSessionService(sessions, topics, NewTTSService())
 
 	topicID := topics.ListTopics()[0].ID
 
@@ -40,7 +40,7 @@ func TestSessionService_CreateSession(t *testing.T) {
 func TestSessionService_CreateSession_UnknownTopic(t *testing.T) {
 	topics := repository.NewTopicRepository()
 	sessions := repository.NewSessionRepository()
-	s := NewSessionService(sessions, topics)
+	s := NewSessionService(sessions, topics, NewTTSService())
 
 	_, err := s.CreateSession("unknown-topic")
 	if !errors.Is(err, ErrTopicNotFound) {
@@ -51,7 +51,7 @@ func TestSessionService_CreateSession_UnknownTopic(t *testing.T) {
 func TestSessionService_PostMessage(t *testing.T) {
 	topics := repository.NewTopicRepository()
 	sessions := repository.NewSessionRepository()
-	s := NewSessionService(sessions, topics)
+	s := NewSessionService(sessions, topics, NewTTSService())
 
 	session, err := s.CreateSession(topics.ListTopics()[0].ID)
 	if err != nil {
@@ -71,6 +71,10 @@ func TestSessionService_PostMessage(t *testing.T) {
 		t.Error("expected a non-empty tutor reply")
 	}
 
+	if reply.AudioURL == "" {
+		t.Error("expected a non-empty audio URL for the tutor reply")
+	}
+
 	updated, ok := sessions.Get(session.ID)
 	if !ok {
 		t.Fatal("expected session to exist after posting a message")
@@ -87,12 +91,16 @@ func TestSessionService_PostMessage(t *testing.T) {
 	if updated.Messages[1].Sender != model.SenderAI {
 		t.Errorf("unexpected second stored message sender: %q", updated.Messages[1].Sender)
 	}
+
+	if updated.Messages[1].AudioURL == "" {
+		t.Error("expected the stored tutor message to have a non-empty audio URL")
+	}
 }
 
 func TestSessionService_PostMessage_SessionNotFound(t *testing.T) {
 	topics := repository.NewTopicRepository()
 	sessions := repository.NewSessionRepository()
-	s := NewSessionService(sessions, topics)
+	s := NewSessionService(sessions, topics, NewTTSService())
 
 	_, err := s.PostMessage("unknown-session", "Hello")
 	if !errors.Is(err, ErrSessionNotFound) {

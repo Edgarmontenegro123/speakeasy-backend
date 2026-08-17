@@ -23,10 +23,11 @@ type SessionService interface {
 type sessionService struct {
 	sessions repository.SessionRepository
 	topics   repository.TopicRepository
+	tts      TTSService
 }
 
-func NewSessionService(sessions repository.SessionRepository, topics repository.TopicRepository) SessionService {
-	return &sessionService{sessions: sessions, topics: topics}
+func NewSessionService(sessions repository.SessionRepository, topics repository.TopicRepository, tts TTSService) SessionService {
+	return &sessionService{sessions: sessions, topics: topics, tts: tts}
 }
 
 func (s *sessionService) CreateSession(topicID string) (model.Session, error) {
@@ -66,6 +67,7 @@ func (s *sessionService) PostMessage(sessionID, content string) (model.Message, 
 		Content:   tutorReply,
 		CreatedAt: time.Now().UTC(),
 	}
+	tutorMessage.AudioURL = s.tts.GenerateAudioURL(tutorMessage.ID)
 
 	session.Messages = append(session.Messages, userMessage, tutorMessage)
 	s.sessions.Update(session)

@@ -21,13 +21,17 @@ func New() http.Handler {
 	topicHandler := handler.NewTopicHandler(topicService)
 
 	sessionRepo := repository.NewSessionRepository()
-	sessionService := service.NewSessionService(sessionRepo, topicRepo)
+	ttsService := service.NewTTSService()
+	sessionService := service.NewSessionService(sessionRepo, topicRepo, ttsService)
 	sessionHandler := handler.NewSessionHandler(sessionService)
+
+	audioHandler := handler.NewAudioHandler()
 
 	mux.HandleFunc("GET /api/v1/health", healthHandler.GetHealth)
 	mux.HandleFunc("GET /api/v1/topics", topicHandler.ListTopics)
 	mux.HandleFunc("POST /api/v1/sessions", sessionHandler.CreateSession)
 	mux.HandleFunc("POST /api/v1/sessions/{id}/messages", sessionHandler.PostMessage)
+	mux.HandleFunc("GET /api/v1/audio/{filename}", audioHandler.GetAudio)
 
 	return middleware.CORS(mux)
 }

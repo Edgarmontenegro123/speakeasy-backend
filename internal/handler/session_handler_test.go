@@ -90,6 +90,7 @@ func TestSessionHandler_PostMessage(t *testing.T) {
 		SessionID: "session-1",
 		Sender:    model.SenderAI,
 		Content:   "Great start! Can you tell me more about that?",
+		AudioURL:  "/api/v1/audio/message-1.mp3",
 		CreatedAt: time.Now().UTC(),
 	}
 	h := NewSessionHandler(stubSessionService{message: want})
@@ -112,6 +113,10 @@ func TestSessionHandler_PostMessage(t *testing.T) {
 
 	if got.Sender != model.SenderAI || got.Content != want.Content {
 		t.Errorf("expected message %+v, got %+v", want, got)
+	}
+
+	if got.AudioURL == "" {
+		t.Error("expected a non-empty audio_url in the tutor's response")
 	}
 }
 

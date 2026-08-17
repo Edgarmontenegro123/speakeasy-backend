@@ -3,9 +3,11 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"testing"
 	"time"
 
@@ -33,10 +35,18 @@ func (s stubSessionService) PostMessage(sessionID, content string) (model.Messag
 
 type stubSTTService struct {
 	transcript string
+	err        error
+	gotMIME    *string
 }
 
-func (s stubSTTService) Transcribe(audio []byte) string {
-	return s.transcript
+func (s stubSTTService) Transcribe(audio []byte, mimeType string) (string, error) {
+	if s.gotMIME != nil {
+		*s.gotMIME = mimeType
+	}
+	if s.err != nil {
+		return "", s.err
+	}
+	return s.transcript, nil
 }
 
 func TestSessionHandler_CreateSession(t *testing.T) {
@@ -163,15 +173,19 @@ func TestSessionHandler_PostMessage_SessionNotFound(t *testing.T) {
 	}
 }
 
-func newMultipartAudioRequest(t *testing.T, audio []byte) (*httptest.ResponseRecorder, *http.Request) {
+func newMultipartAudioRequest(t *testing.T, audio []byte, mimeType string) (*httptest.ResponseRecorder, *http.Request) {
 	t.Helper()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	part, err := writer.CreateFormFile("file", "audio.wav")
+	partHeader := textproto.MIMEHeader{}
+	partHeader.Set("Content-Disposition", `form-data; name="file"; filename="audio.rec"`)
+	partHeader.Set("Content-Type", mimeType)
+
+	part, err := writer.CreatePart(partHeader)
 	if err != nil {
-		t.Fatalf("failed to create form file: %v", err)
+		t.Fatalf("failed to create form part: %v", err)
 	}
 	if _, err := part.Write(audio); err != nil {
 		t.Fatalf("failed to write audio bytes: %v", err)
@@ -198,15 +212,23 @@ func TestSessionHandler_PostMessage_MultipartAudio(t *testing.T) {
 	}
 	transcript := "Hello, I want to practice my English today"
 	var gotContent string
+	var gotMIME string
 
-	h := NewSessionHandler(stubSessionService{message: want, gotContent: &gotContent}, stubSTTService{transcript: transcript})
+	h := NewSessionHandler(
+		stubSessionService{message: want, gotContent: &gotContent},
+		stubSTTService{transcript: transcript, gotMIME: &gotMIME},
+	)
 
-	rec, req := newMultipartAudioRequest(t, []byte("fake audio bytes"))
+	rec, req := newMultipartAudioRequest(t, []byte("fake audio bytes"), "audio/wav")
 
 	h.PostMessage(rec, req)
 
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+	}
+
+	if gotMIME != "audio/wav" {
+		t.Errorf("expected the STT service to receive mime type %q, got %q", "audio/wav", gotMIME)
 	}
 
 	if gotContent != transcript {
@@ -220,6 +242,43 @@ func TestSessionHandler_PostMessage_MultipartAudio(t *testing.T) {
 
 	if got.AudioURL == "" {
 		t.Error("expected a non-empty audio_url in the tutor's response")
+	}
+}
+
+func TestSessionHandler_PostMessage_MultipartAudio_Webm(t *testing.T) {
+	want := model.Message{ID: "message-1", Sender: model.SenderAI, AudioURL: "/api/v1/audio/message-1.mp3"}
+	h := NewSessionHandler(stubSessionService{message: want}, stubSTTService{transcript: "Hi there"})
+
+	rec, req := newMultipartAudioRequest(t, []byte("fake webm bytes"), "audio/webm;codecs=opus")
+
+	h.PostMessage(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+	}
+}
+
+func TestSessionHandler_PostMessage_MultipartUnsupportedFormat(t *testing.T) {
+	h := NewSessionHandler(stubSessionService{}, stubSTTService{transcript: "Hi there"})
+
+	rec, req := newMultipartAudioRequest(t, []byte("fake bytes"), "video/mp4")
+
+	h.PostMessage(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, rec.Code)
+	}
+}
+
+func TestSessionHandler_PostMessage_TranscriptionError(t *testing.T) {
+	h := NewSessionHandler(stubSessionService{}, stubSTTService{err: errors.New("gemini unavailable")})
+
+	rec, req := newMultipartAudioRequest(t, []byte("fake audio bytes"), "audio/wav")
+
+	h.PostMessage(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, rec.Code)
 	}
 }
 

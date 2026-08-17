@@ -25,7 +25,7 @@ func New(cfg config.Config) http.Handler {
 
 	sessionRepo := repository.NewSessionRepository()
 	ttsService := service.NewTTSService()
-	sttService := service.NewSTTService()
+	sttService := newSTTService(cfg)
 	llmService := newLLMService(cfg)
 	sessionService := service.NewSessionService(sessionRepo, topicRepo, ttsService, llmService)
 	sessionHandler := handler.NewSessionHandler(sessionService, sttService)
@@ -57,4 +57,22 @@ func newLLMService(cfg config.Config) service.LLMService {
 
 	log.Printf("using Gemini model %q for tutor replies", cfg.GeminiModel)
 	return llmService
+}
+
+// newSTTService uses Gemini when an API key is configured, falling back to
+// a stub transcription otherwise (e.g. local development without a key).
+func newSTTService(cfg config.Config) service.STTService {
+	if cfg.GeminiAPIKey == "" {
+		log.Println("GEMINI_API_KEY not set, using stub audio transcription")
+		return service.NewSTTService()
+	}
+
+	sttService, err := service.NewGeminiSTTService(context.Background(), cfg.GeminiAPIKey, cfg.GeminiModel)
+	if err != nil {
+		log.Printf("failed to initialise Gemini STT service, falling back to stub transcription: %v", err)
+		return service.NewSTTService()
+	}
+
+	log.Printf("using Gemini model %q for audio transcription", cfg.GeminiModel)
+	return sttService
 }

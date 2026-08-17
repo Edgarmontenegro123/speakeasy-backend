@@ -78,8 +78,9 @@ func (h *SessionHandler) PostMessage(w http.ResponseWriter, r *http.Request) {
 
 // extractContent resolves the message content from either a JSON body
 // ({"content": "..."}) or a multipart/form-data upload carrying an audio
-// file (field "file"), which is run through the STT service to obtain a
-// transcription. It writes a 400 response and returns ok=false on failure.
+// file (field "file", audio/webm or audio/wav), which is run through the
+// STT service to obtain a transcription. It writes a 400 response and
+// returns ok=false on failure.
 func (h *SessionHandler) extractContent(w http.ResponseWriter, r *http.Request) (string, bool) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		return h.extractContentFromAudio(w, r)
@@ -104,12 +105,18 @@ func (h *SessionHandler) extractContentFromAudio(w http.ResponseWriter, r *http.
 		return "", false
 	}
 
-	file, _, err := r.FormFile("file")
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, "an audio file is required")
 		return "", false
 	}
 	defer file.Close()
+
+	mimeType := header.Header.Get("Content-Type")
+	if !isSupportedAudioMIME(mimeType) {
+		writeJSONError(w, http.StatusBadRequest, "unsupported audio format, expected audio/webm or audio/wav")
+		return "", false
+	}
 
 	audio, err := io.ReadAll(file)
 	if err != nil {
@@ -117,13 +124,25 @@ func (h *SessionHandler) extractContentFromAudio(w http.ResponseWriter, r *http.
 		return "", false
 	}
 
-	content := h.stt.Transcribe(audio)
+	content, err := h.stt.Transcribe(audio, mimeType)
+	if err != nil {
+		log.Printf("failed to transcribe audio: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "internal server error")
+		return "", false
+	}
 	if content == "" {
 		writeJSONError(w, http.StatusBadRequest, "content is required")
 		return "", false
 	}
 
 	return content, true
+}
+
+// isSupportedAudioMIME reports whether mimeType is an accepted audio upload
+// format, tolerating parameters such as "audio/webm;codecs=opus".
+func isSupportedAudioMIME(mimeType string) bool {
+	mimeType = strings.ToLower(strings.TrimSpace(mimeType))
+	return strings.HasPrefix(mimeType, "audio/webm") || strings.HasPrefix(mimeType, "audio/wav")
 }
 
 func writeJSONError(w http.ResponseWriter, status int, message string) {

@@ -22,8 +22,9 @@ func New() http.Handler {
 
 	sessionRepo := repository.NewSessionRepository()
 	ttsService := service.NewTTSService()
+	sttService := service.NewSTTService()
 	sessionService := service.NewSessionService(sessionRepo, topicRepo, ttsService)
-	sessionHandler := handler.NewSessionHandler(sessionService)
+	sessionHandler := handler.NewSessionHandler(sessionService, sttService)
 
 	audioHandler := handler.NewAudioHandler()
 

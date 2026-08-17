@@ -2,7 +2,10 @@ module github.com/Edgarmontenegro123/speakeasy-backend
 
 go 1.25.7
 
-require google.golang.org/genai v1.68.0
+require (
+	github.com/joho/godotenv v1.5.1
+	google.golang.org/genai v1.68.0
+)
 
 require (
 	cloud.google.com/go v0.116.0 // indirect

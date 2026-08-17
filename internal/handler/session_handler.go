@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -65,6 +66,7 @@ func (h *SessionHandler) PostMessage(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusNotFound, "session not found")
 			return
 		}
+		log.Printf("failed to post message for session %q: %v", sessionID, err)
 		writeJSONError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}

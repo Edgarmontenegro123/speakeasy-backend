@@ -16,7 +16,17 @@ func New() http.Handler {
 	healthService := service.NewHealthService(healthRepo)
 	healthHandler := handler.NewHealthHandler(healthService)
 
+	topicRepo := repository.NewTopicRepository()
+	topicService := service.NewTopicService(topicRepo)
+	topicHandler := handler.NewTopicHandler(topicService)
+
+	sessionRepo := repository.NewSessionRepository()
+	sessionService := service.NewSessionService(sessionRepo, topicRepo)
+	sessionHandler := handler.NewSessionHandler(sessionService)
+
 	mux.HandleFunc("GET /api/v1/health", healthHandler.GetHealth)
+	mux.HandleFunc("GET /api/v1/topics", topicHandler.ListTopics)
+	mux.HandleFunc("POST /api/v1/sessions", sessionHandler.CreateSession)
 
 	return middleware.CORS(mux)
 }

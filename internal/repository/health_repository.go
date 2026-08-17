@@ -1,6 +1,6 @@
 package repository
 
-import "speakeasy-server/internal/model"
+import "github.com/Edgarmontenegro123/speakeasy-backend/internal/model"
 
 type HealthRepository interface {
 	GetStatus() model.HealthStatus

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"speakeasy-server/internal/model"
-	"speakeasy-server/internal/repository"
+	"github.com/Edgarmontenegro123/speakeasy-backend/internal/model"
+	"github.com/Edgarmontenegro123/speakeasy-backend/internal/repository"
 )
 
 type HealthService interface {

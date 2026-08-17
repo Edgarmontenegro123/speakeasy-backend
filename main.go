@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"speakeasy-server/internal/config"
-	"speakeasy-server/internal/router"
+	"github.com/Edgarmontenegro123/speakeasy-backend/internal/config"
+	"github.com/Edgarmontenegro123/speakeasy-backend/internal/router"
 )
 
 func main() {

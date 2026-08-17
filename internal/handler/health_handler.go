@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"speakeasy-server/internal/service"
+	"github.com/Edgarmontenegro123/speakeasy-backend/internal/service"
 )
 
 type HealthHandler struct {

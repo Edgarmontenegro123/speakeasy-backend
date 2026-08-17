@@ -8,10 +8,16 @@ import (
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/repository"
 )
 
-var ErrTopicNotFound = errors.New("topic not found")
+var (
+	ErrTopicNotFound   = errors.New("topic not found")
+	ErrSessionNotFound = errors.New("session not found")
+)
+
+const tutorReply = "Great start! Can you tell me more about that?"
 
 type SessionService interface {
 	CreateSession(topicID string) (model.Session, error)
+	PostMessage(sessionID, content string) (model.Message, error)
 }
 
 type sessionService struct {
@@ -37,6 +43,34 @@ func (s *sessionService) CreateSession(topicID string) (model.Session, error) {
 	}
 
 	return s.sessions.Create(session), nil
+}
+
+func (s *sessionService) PostMessage(sessionID, content string) (model.Message, error) {
+	session, ok := s.sessions.Get(sessionID)
+	if !ok {
+		return model.Message{}, ErrSessionNotFound
+	}
+
+	userMessage := model.Message{
+		ID:        newID("message"),
+		SessionID: sessionID,
+		Sender:    model.SenderUser,
+		Content:   content,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	tutorMessage := model.Message{
+		ID:        newID("message"),
+		SessionID: sessionID,
+		Sender:    model.SenderAI,
+		Content:   tutorReply,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	session.Messages = append(session.Messages, userMessage, tutorMessage)
+	s.sessions.Update(session)
+
+	return tutorMessage, nil
 }
 
 func (s *sessionService) topicExists(topicID string) bool {

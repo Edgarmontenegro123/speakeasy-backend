@@ -4,6 +4,7 @@ import "github.com/Edgarmontenegro123/speakeasy-backend/internal/model"
 
 type TopicRepository interface {
 	ListTopics() []model.Topic
+	GetTopic(id string) (model.Topic, bool)
 }
 
 type topicRepository struct {
@@ -24,4 +25,13 @@ func NewTopicRepository() TopicRepository {
 
 func (r *topicRepository) ListTopics() []model.Topic {
 	return r.topics
+}
+
+func (r *topicRepository) GetTopic(id string) (model.Topic, bool) {
+	for _, topic := range r.topics {
+		if topic.ID == id {
+			return topic, true
+		}
+	}
+	return model.Topic{}, false
 }

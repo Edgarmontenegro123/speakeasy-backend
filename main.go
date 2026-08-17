@@ -10,7 +10,7 @@ import (
 
 func main() {
 	cfg := config.Load()
-	mux := router.New()
+	mux := router.New(cfg)
 
 	log.Printf("Speakeasy API listening on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {

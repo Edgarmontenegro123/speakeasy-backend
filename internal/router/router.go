@@ -1,15 +1,18 @@
 package router
 
 import (
+	"context"
+	"log"
 	"net/http"
 
+	"github.com/Edgarmontenegro123/speakeasy-backend/internal/config"
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/handler"
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/middleware"
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/repository"
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/service"
 )
 
-func New() http.Handler {
+func New(cfg config.Config) http.Handler {
 	mux := http.NewServeMux()
 
 	healthRepo := repository.NewHealthRepository()
@@ -23,7 +26,8 @@ func New() http.Handler {
 	sessionRepo := repository.NewSessionRepository()
 	ttsService := service.NewTTSService()
 	sttService := service.NewSTTService()
-	sessionService := service.NewSessionService(sessionRepo, topicRepo, ttsService)
+	llmService := newLLMService(cfg)
+	sessionService := service.NewSessionService(sessionRepo, topicRepo, ttsService, llmService)
 	sessionHandler := handler.NewSessionHandler(sessionService, sttService)
 
 	audioHandler := handler.NewAudioHandler()
@@ -35,4 +39,21 @@ func New() http.Handler {
 	mux.HandleFunc("GET /api/v1/audio/{filename}", audioHandler.GetAudio)
 
 	return middleware.CORS(mux)
+}
+
+// newLLMService uses Gemini when an API key is configured, falling back to
+// a stub tutor reply otherwise (e.g. local development without a key).
+func newLLMService(cfg config.Config) service.LLMService {
+	if cfg.GeminiAPIKey == "" {
+		log.Println("GEMINI_API_KEY not set, using stub tutor replies")
+		return service.NewStubLLMService()
+	}
+
+	llmService, err := service.NewGeminiLLMService(context.Background(), cfg.GeminiAPIKey)
+	if err != nil {
+		log.Printf("failed to initialise Gemini LLM service, falling back to stub replies: %v", err)
+		return service.NewStubLLMService()
+	}
+
+	return llmService
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/model"
@@ -13,8 +14,6 @@ var (
 	ErrSessionNotFound = errors.New("session not found")
 )
 
-const tutorReply = "Great start! Can you tell me more about that?"
-
 type SessionService interface {
 	CreateSession(topicID string) (model.Session, error)
 	PostMessage(sessionID, content string) (model.Message, error)
@@ -24,10 +23,11 @@ type sessionService struct {
 	sessions repository.SessionRepository
 	topics   repository.TopicRepository
 	tts      TTSService
+	llm      LLMService
 }
 
-func NewSessionService(sessions repository.SessionRepository, topics repository.TopicRepository, tts TTSService) SessionService {
-	return &sessionService{sessions: sessions, topics: topics, tts: tts}
+func NewSessionService(sessions repository.SessionRepository, topics repository.TopicRepository, tts TTSService, llm LLMService) SessionService {
+	return &sessionService{sessions: sessions, topics: topics, tts: tts, llm: llm}
 }
 
 func (s *sessionService) CreateSession(topicID string) (model.Session, error) {
@@ -52,6 +52,16 @@ func (s *sessionService) PostMessage(sessionID, content string) (model.Message, 
 		return model.Message{}, ErrSessionNotFound
 	}
 
+	topic, ok := s.topics.GetTopic(session.TopicID)
+	if !ok {
+		return model.Message{}, ErrTopicNotFound
+	}
+
+	reply, err := s.llm.GenerateReply(topic, session.Messages, content)
+	if err != nil {
+		return model.Message{}, fmt.Errorf("generating tutor reply: %w", err)
+	}
+
 	userMessage := model.Message{
 		ID:        newID("message"),
 		SessionID: sessionID,
@@ -64,7 +74,7 @@ func (s *sessionService) PostMessage(sessionID, content string) (model.Message, 
 		ID:        newID("message"),
 		SessionID: sessionID,
 		Sender:    model.SenderAI,
-		Content:   tutorReply,
+		Content:   reply,
 		CreatedAt: time.Now().UTC(),
 	}
 	tutorMessage.AudioURL = s.tts.GenerateAudioURL(tutorMessage.ID)
@@ -76,10 +86,6 @@ func (s *sessionService) PostMessage(sessionID, content string) (model.Message, 
 }
 
 func (s *sessionService) topicExists(topicID string) bool {
-	for _, topic := range s.topics.ListTopics() {
-		if topic.ID == topicID {
-			return true
-		}
-	}
-	return false
+	_, ok := s.topics.GetTopic(topicID)
+	return ok
 }

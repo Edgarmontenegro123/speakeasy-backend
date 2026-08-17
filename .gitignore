@@ -1,0 +1,13 @@
+# Editor / IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# Environment
+.env
+.env.local
+*.env
+
+# OS
+Thumbs.db

@@ -2,9 +2,12 @@ package config
 
 import "os"
 
+const defaultGeminiModel = "gemini-2.5-flash"
+
 type Config struct {
 	Port         string
 	GeminiAPIKey string
+	GeminiModel  string
 }
 
 func Load() Config {
@@ -13,8 +16,14 @@ func Load() Config {
 		port = "8080"
 	}
 
+	geminiModel := os.Getenv("GEMINI_MODEL")
+	if geminiModel == "" {
+		geminiModel = defaultGeminiModel
+	}
+
 	return Config{
 		Port:         port,
 		GeminiAPIKey: os.Getenv("GEMINI_API_KEY"),
+		GeminiModel:  geminiModel,
 	}
 }

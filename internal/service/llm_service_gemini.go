@@ -10,14 +10,17 @@ import (
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/model"
 )
 
-const geminiModel = "gemini-1.5-flash-latest"
-
 // geminiLLMService generates tutor replies using the Gemini API.
 type geminiLLMService struct {
 	client *genai.Client
+	model  string
 }
 
-func NewGeminiLLMService(ctx context.Context, apiKey string) (LLMService, error) {
+// NewGeminiLLMService creates an LLMService backed by the given Gemini model
+// (e.g. "gemini-2.5-flash"). Google periodically retires older model IDs, so
+// the model is caller-supplied rather than hardcoded — see GEMINI_MODEL in
+// internal/config for how it is configured.
+func NewGeminiLLMService(ctx context.Context, apiKey, modelName string) (LLMService, error) {
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
 		APIKey:  apiKey,
 		Backend: genai.BackendGeminiAPI,
@@ -26,13 +29,13 @@ func NewGeminiLLMService(ctx context.Context, apiKey string) (LLMService, error)
 		return nil, fmt.Errorf("creating Gemini client: %w", err)
 	}
 
-	return &geminiLLMService{client: client}, nil
+	return &geminiLLMService{client: client, model: modelName}, nil
 }
 
 func (s *geminiLLMService) GenerateReply(topic model.Topic, history []model.Message, userMessage string) (string, error) {
 	prompt := buildTutorPrompt(topic, history, userMessage)
 
-	resp, err := s.client.Models.GenerateContent(context.Background(), geminiModel, genai.Text(prompt), nil)
+	resp, err := s.client.Models.GenerateContent(context.Background(), s.model, genai.Text(prompt), nil)
 	if err != nil {
 		return "", fmt.Errorf("generating tutor reply: %w", err)
 	}

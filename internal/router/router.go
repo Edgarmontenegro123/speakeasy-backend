@@ -49,11 +49,12 @@ func newLLMService(cfg config.Config) service.LLMService {
 		return service.NewStubLLMService()
 	}
 
-	llmService, err := service.NewGeminiLLMService(context.Background(), cfg.GeminiAPIKey)
+	llmService, err := service.NewGeminiLLMService(context.Background(), cfg.GeminiAPIKey, cfg.GeminiModel)
 	if err != nil {
 		log.Printf("failed to initialise Gemini LLM service, falling back to stub replies: %v", err)
 		return service.NewStubLLMService()
 	}
 
+	log.Printf("using Gemini model %q for tutor replies", cfg.GeminiModel)
 	return llmService
 }

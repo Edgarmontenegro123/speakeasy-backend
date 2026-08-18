@@ -180,7 +180,7 @@ func newMultipartAudioRequest(t *testing.T, audio []byte, mimeType string) (*htt
 	writer := multipart.NewWriter(body)
 
 	partHeader := textproto.MIMEHeader{}
-	partHeader.Set("Content-Disposition", `form-data; name="file"; filename="audio.rec"`)
+	partHeader.Set("Content-Disposition", `form-data; name="audio"; filename="audio.rec"`)
 	partHeader.Set("Content-Type", mimeType)
 
 	part, err := writer.CreatePart(partHeader)
@@ -250,6 +250,19 @@ func TestSessionHandler_PostMessage_MultipartAudio_Webm(t *testing.T) {
 	h := NewSessionHandler(stubSessionService{message: want}, stubSTTService{transcript: "Hi there"})
 
 	rec, req := newMultipartAudioRequest(t, []byte("fake webm bytes"), "audio/webm;codecs=opus")
+
+	h.PostMessage(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, rec.Code)
+	}
+}
+
+func TestSessionHandler_PostMessage_MultipartAudio_Ogg(t *testing.T) {
+	want := model.Message{ID: "message-1", Sender: model.SenderAI, AudioURL: "/api/v1/audio/message-1.mp3"}
+	h := NewSessionHandler(stubSessionService{message: want}, stubSTTService{transcript: "Hi there"})
+
+	rec, req := newMultipartAudioRequest(t, []byte("fake ogg bytes"), "audio/ogg")
 
 	h.PostMessage(rec, req)
 

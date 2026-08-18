@@ -65,7 +65,7 @@ func (s *sessionService) PostMessage(sessionID, content string) (model.Message, 
 	userMessage := model.Message{
 		ID:        newID("message"),
 		SessionID: sessionID,
-		Sender:    model.SenderUser,
+		Role:      model.RoleUser,
 		Content:   content,
 		CreatedAt: time.Now().UTC(),
 	}
@@ -73,7 +73,7 @@ func (s *sessionService) PostMessage(sessionID, content string) (model.Message, 
 	tutorMessage := model.Message{
 		ID:        newID("message"),
 		SessionID: sessionID,
-		Sender:    model.SenderAI,
+		Role:      model.RoleAssistant,
 		Content:   reply,
 		CreatedAt: time.Now().UTC(),
 	}

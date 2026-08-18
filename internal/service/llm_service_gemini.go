@@ -60,10 +60,10 @@ func buildTutorPrompt(topic model.Topic, history []model.Message, userMessage st
 	b.WriteString(" Keep your reply short (1-3 sentences), gently correct any mistakes, and end with a question that keeps the student talking.\n\n")
 
 	for _, msg := range history {
-		switch msg.Sender {
-		case model.SenderUser:
+		switch msg.Role {
+		case model.RoleUser:
 			b.WriteString("Student: " + msg.Content + "\n")
-		case model.SenderAI:
+		case model.RoleAssistant:
 			b.WriteString("Tutor: " + msg.Content + "\n")
 		}
 	}

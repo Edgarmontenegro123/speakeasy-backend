@@ -111,7 +111,7 @@ func TestSessionHandler_PostMessage(t *testing.T) {
 	want := model.Message{
 		ID:        "message-1",
 		SessionID: "session-1",
-		Sender:    model.SenderAI,
+		Role:      model.RoleAssistant,
 		Content:   "Great start! Can you tell me more about that?",
 		AudioURL:  "/api/v1/audio/message-1.mp3",
 		CreatedAt: time.Now().UTC(),
@@ -134,7 +134,7 @@ func TestSessionHandler_PostMessage(t *testing.T) {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
 
-	if got.Sender != model.SenderAI || got.Content != want.Content {
+	if got.Role != model.RoleAssistant || got.Content != want.Content {
 		t.Errorf("expected message %+v, got %+v", want, got)
 	}
 
@@ -205,7 +205,7 @@ func TestSessionHandler_PostMessage_MultipartAudio(t *testing.T) {
 	want := model.Message{
 		ID:        "message-1",
 		SessionID: "session-1",
-		Sender:    model.SenderAI,
+		Role:      model.RoleAssistant,
 		Content:   "Great start! Can you tell me more about that?",
 		AudioURL:  "/api/v1/audio/message-1.mp3",
 		CreatedAt: time.Now().UTC(),
@@ -235,18 +235,26 @@ func TestSessionHandler_PostMessage_MultipartAudio(t *testing.T) {
 		t.Errorf("expected transcribed content %q, got %q", transcript, gotContent)
 	}
 
-	var got model.Message
+	var got postAudioMessageResponse
 	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
 		t.Fatalf("failed to decode response body: %v", err)
 	}
 
-	if got.AudioURL == "" {
-		t.Error("expected a non-empty audio_url in the tutor's response")
+	if got.Transcript != transcript {
+		t.Errorf("expected response transcript %q, got %q", transcript, got.Transcript)
+	}
+
+	if got.Reply.Role != model.RoleAssistant || got.Reply.Content != want.Content {
+		t.Errorf("expected reply %+v, got %+v", want, got.Reply)
+	}
+
+	if got.Reply.AudioURL == "" {
+		t.Error("expected a non-empty audio_url in the tutor's reply")
 	}
 }
 
 func TestSessionHandler_PostMessage_MultipartAudio_Webm(t *testing.T) {
-	want := model.Message{ID: "message-1", Sender: model.SenderAI, AudioURL: "/api/v1/audio/message-1.mp3"}
+	want := model.Message{ID: "message-1", Role: model.RoleAssistant, AudioURL: "/api/v1/audio/message-1.mp3"}
 	h := NewSessionHandler(stubSessionService{message: want}, stubSTTService{transcript: "Hi there"})
 
 	rec, req := newMultipartAudioRequest(t, []byte("fake webm bytes"), "audio/webm;codecs=opus")
@@ -259,7 +267,7 @@ func TestSessionHandler_PostMessage_MultipartAudio_Webm(t *testing.T) {
 }
 
 func TestSessionHandler_PostMessage_MultipartAudio_Ogg(t *testing.T) {
-	want := model.Message{ID: "message-1", Sender: model.SenderAI, AudioURL: "/api/v1/audio/message-1.mp3"}
+	want := model.Message{ID: "message-1", Role: model.RoleAssistant, AudioURL: "/api/v1/audio/message-1.mp3"}
 	h := NewSessionHandler(stubSessionService{message: want}, stubSTTService{transcript: "Hi there"})
 
 	rec, req := newMultipartAudioRequest(t, []byte("fake ogg bytes"), "audio/ogg")

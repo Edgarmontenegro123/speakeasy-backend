@@ -82,8 +82,8 @@ func TestSessionService_PostMessage(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if reply.Sender != model.SenderAI {
-		t.Errorf("expected sender %q, got %q", model.SenderAI, reply.Sender)
+	if reply.Role != model.RoleAssistant {
+		t.Errorf("expected role %q, got %q", model.RoleAssistant, reply.Role)
 	}
 
 	if reply.Content == "" {
@@ -103,12 +103,12 @@ func TestSessionService_PostMessage(t *testing.T) {
 		t.Fatalf("expected 2 messages stored, got %d", len(updated.Messages))
 	}
 
-	if updated.Messages[0].Sender != model.SenderUser || updated.Messages[0].Content != "Hello, I want to practise English." {
+	if updated.Messages[0].Role != model.RoleUser || updated.Messages[0].Content != "Hello, I want to practise English." {
 		t.Errorf("unexpected first stored message: %+v", updated.Messages[0])
 	}
 
-	if updated.Messages[1].Sender != model.SenderAI {
-		t.Errorf("unexpected second stored message sender: %q", updated.Messages[1].Sender)
+	if updated.Messages[1].Role != model.RoleAssistant {
+		t.Errorf("unexpected second stored message role: %q", updated.Messages[1].Role)
 	}
 
 	if updated.Messages[1].AudioURL == "" {

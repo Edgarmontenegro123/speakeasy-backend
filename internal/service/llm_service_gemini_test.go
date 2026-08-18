@@ -15,8 +15,8 @@ func TestBuildTutorPrompt(t *testing.T) {
 		Level:       model.LevelA1,
 	}
 	history := []model.Message{
-		{Sender: model.SenderUser, Content: "Hi!"},
-		{Sender: model.SenderAI, Content: "Hello! Ready to practise?"},
+		{Role: model.RoleUser, Content: "Hi!"},
+		{Role: model.RoleAssistant, Content: "Hello! Ready to practise?"},
 	}
 
 	prompt := buildTutorPrompt(topic, history, "I would like a coffee.")

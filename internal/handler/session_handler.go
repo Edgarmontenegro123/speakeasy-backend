@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Edgarmontenegro123/speakeasy-backend/internal/model"
 	"github.com/Edgarmontenegro123/speakeasy-backend/internal/service"
 )
 
@@ -52,8 +53,17 @@ type postMessageRequest struct {
 	Content string `json:"content"`
 }
 
+// postAudioMessageResponse is returned instead of a bare Message when the
+// request was a multipart audio upload, since the client has no way to know
+// what the recording transcribed to until the server tells it.
+type postAudioMessageResponse struct {
+	Transcript string        `json:"transcript"`
+	Reply      model.Message `json:"reply"`
+}
+
 func (h *SessionHandler) PostMessage(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.PathValue("id")
+	audioRequest := isMultipartRequest(r)
 
 	content, ok := h.extractContent(w, r)
 	if !ok {
@@ -73,7 +83,19 @@ func (h *SessionHandler) PostMessage(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
+	if audioRequest {
+		json.NewEncoder(w).Encode(postAudioMessageResponse{Transcript: content, Reply: message})
+		return
+	}
+
 	json.NewEncoder(w).Encode(message)
+}
+
+// isMultipartRequest reports whether the request carries a multipart/form-data
+// body, i.e. an audio upload rather than a JSON message.
+func isMultipartRequest(r *http.Request) bool {
+	return strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data")
 }
 
 // extractContent resolves the message content from either a JSON body
@@ -82,7 +104,7 @@ func (h *SessionHandler) PostMessage(w http.ResponseWriter, r *http.Request) {
 // through the STT service to obtain a transcription. It writes a 400
 // response and returns ok=false on failure.
 func (h *SessionHandler) extractContent(w http.ResponseWriter, r *http.Request) (string, bool) {
-	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+	if isMultipartRequest(r) {
 		return h.extractContentFromAudio(w, r)
 	}
 
